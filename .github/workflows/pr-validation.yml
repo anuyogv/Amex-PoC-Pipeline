@@ -1,0 +1,24 @@
+name: E1 Mock Deployment
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy-to-e1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install @salesforce/cli --global
+
+      - name: Authenticate to Mock E1
+        run: |
+          echo "${{ secrets.MOCK_E1_AUTH_URL }}" > authfile
+          sf org login sfdx-url --sfdx-url-file authfile --set-default
+          rm authfile
+
+      - name: Validate Deployment (Dry Run)
+        run: sf project deploy validate --source-dir force-app --test-level RunLocalTests
