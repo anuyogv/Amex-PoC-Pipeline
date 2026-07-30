@@ -1,4 +1,4 @@
-name: E1 Mock Deploy
+name: E1 Mock Deployment
  
 on:
   pull_request:
