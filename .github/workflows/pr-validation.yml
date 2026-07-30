@@ -15,8 +15,10 @@ jobs:
         run: npm install @salesforce/cli --global
 
       - name: Authenticate to Mock E1
+        env:
+          AUTH_URL: ${{ secrets.MOCK_E1_AUTH_URL }}
         run: |
-          echo "${{ secrets.MOCK_E1_AUTH_URL }}" > authfile
+          echo "$AUTH_URL" > authfile
           sf org login sfdx-url --sfdx-url-file authfile --set-default
           rm authfile
 
