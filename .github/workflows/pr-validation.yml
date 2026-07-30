@@ -1,16 +1,101 @@
 name: E1 Mock Deployment
-
+ 
+ on:
+   pull_request:
+     branches: [ main ]
+ 
+ jobs:
+   validate-and-deploy:
+     runs-on: ubuntu-latest
+     steps:
+       - name: Checkout Source Code
+         uses: actions/checkout@v4
+ 
+       # ---------------------------------------------------------
+       # GUARDRAIL 1: Branch Naming Convention
+       # ---------------------------------------------------------
+       - name: Enforce Amex Branch Naming
+         run: |
+           BRANCH_NAME="${{ github.head_ref }}"
+           echo "Evaluating branch: $BRANCH_NAME"
+           
+           if [[ ! $BRANCH_NAME =~ ^(userstory/US.*|fix/.*)$ ]]; then
+             echo "::error::Branch name '$BRANCH_NAME' is invalid! It must start with 'userstory/US' (e.g., userstory/US_12345) or 'fix/' (e.g., fix/login-bug)."
+             exit 1
+           fi
+           echo "Branch name is compliant."
+ 
+       # ---------------------------------------------------------
+       # GUARDRAIL 2: PR Title Linting (Conventional Commits)
+       # ---------------------------------------------------------
+       - name: Lint PR Title
+         uses: amannn/action-semantic-pull-request@v5
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         with:
+           # Automatically validates prefixes like feat:, fix:, chore:, docs:
+           subjectPattern: ^(?![A-Z]).+$
+           subjectPatternError: |
+             The subject (description after the prefix) must start with a lowercase letter.
+ 
+       # ---------------------------------------------------------
+       # SALESFORCE DEPLOYMENT (Executes only if guardrails pass)
+       # ---------------------------------------------------------
+       - name: Install Salesforce CLI
+         run: npm install @salesforce/cli --global
+ 
+       - name: Authenticate to Mock E1
+         env:
+           AUTH_URL: ${{ secrets.MOCK_E1_AUTH_URL }}
+         run: |
+           echo "$AUTH_URL" > authfile
+           sf org login sfdx-url --sfdx-url-file authfile --set-default
+           rm authfile
+ 
+       - name: Validate Deployment (Dry Run)
+         run: sf project deploy validate --source-dir force-app
+ 
 on:
   pull_request:
     branches: [ main ]
 
 jobs:
-  deploy-to-e1:
+  validate-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      # ---------------------------------------------------------
+      # GUARDRAIL 1: Branch Naming Convention
+      # ---------------------------------------------------------
+      - name: Enforce Amex Branch Naming
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          echo "Evaluating branch: $BRANCH_NAME"
+          
+          if [[ ! $BRANCH_NAME =~ ^(userstory/US.*|fix/.*)$ ]]; then
+            echo "::error::Branch name '$BRANCH_NAME' is invalid! It must start with 'userstory/US' (e.g., userstory/US_12345) or 'fix/' (e.g., fix/login-bug)."
+            exit 1
+          fi
+          echo "Branch name is compliant."
+
+      # ---------------------------------------------------------
+      # GUARDRAIL 2: PR Title Linting (Conventional Commits)
+      # ---------------------------------------------------------
+      - name: Lint PR Title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Automatically validates prefixes like feat:, fix:, chore:, docs:
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject (description after the prefix) must start with a lowercase letter.
+
+      # ---------------------------------------------------------
+      # SALESFORCE DEPLOYMENT (Executes only if guardrails pass)
+      # ---------------------------------------------------------
       - name: Install Salesforce CLI
         run: npm install @salesforce/cli --global
 
