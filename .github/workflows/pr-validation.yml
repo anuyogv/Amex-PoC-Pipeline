@@ -33,7 +33,7 @@ jobs:
 
       - name: Setup Commitlint Config
         run: |
-          echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
+          echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.cjs
           npm install @commitlint/config-conventional -g
 
       - name: Lint Commit Messages
