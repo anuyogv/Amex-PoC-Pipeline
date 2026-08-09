@@ -1,26 +1,26 @@
-name: E1 Mock Deployment
- 
+name: Validate Pull Request
+
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ develop, release ]
 
 jobs:
-  validate-and-deploy:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Enforce Amex Branch Naming
+      - name: Enforce Branch Naming
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
           echo "Evaluating branch: $BRANCH_NAME"
-          
-          if [[ ! $BRANCH_NAME =~ ^(userstory/US.*|fix/.*)$ ]]; then
-            echo "::error::Branch name '$BRANCH_NAME' is invalid! It must start with 'userstory/US' (e.g., userstory/US_12345) or 'fix/' (e.g., fix/login-bug)."
+          if [[ ! $BRANCH_NAME =~ ^(userstory/US.*|fix/.*|develop)$ ]]; then
+            echo "::error::Invalid branch name: '$BRANCH_NAME'. Must be userstory/US*, fix/*, or 'develop'."
             exit 1
           fi
-          echo "Branch name is compliant."
 
       - name: Lint PR Title
         uses: amannn/action-semantic-pull-request@v5
@@ -31,14 +31,30 @@ jobs:
           subjectPatternError: |
             The subject (description after the prefix) must start with a lowercase letter.
 
+      - name: Setup Commitlint Config
+        run: |
+          echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
+          npm install @commitlint/config-conventional -g
+
+      - name: Lint Commit Messages
+        uses: wagoid/commitlint-github-action@v6
+
       - name: Install Salesforce CLI
         run: npm install @salesforce/cli --global
 
-      - name: Authenticate to Mock E1
-        env:
-          AUTH_URL: ${{ secrets.MOCK_E1_AUTH_URL }}
+      - name: Route Validation to Correct Environment
         run: |
-          echo "$AUTH_URL" > authfile
+          if [[ "${{ github.base_ref }}" == "develop" ]]; then
+            echo "Routing to E1 Sandbox..."
+            echo "TARGET_AUTH_URL=${{ secrets.MOCK_E1_AUTH_URL }}" >> $GITHUB_ENV
+          elif [[ "${{ github.base_ref }}" == "release" ]]; then
+            echo "Routing to UAT Sandbox..."
+            echo "TARGET_AUTH_URL=${{ secrets.MOCK_UAT_AUTH_URL }}" >> $GITHUB_ENV
+          fi
+
+      - name: Authenticate to Target Org
+        run: |
+          echo "$TARGET_AUTH_URL" > authfile
           sf org login sfdx-url --sfdx-url-file authfile --set-default
           rm authfile
 
