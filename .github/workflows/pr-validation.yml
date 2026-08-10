@@ -17,8 +17,8 @@ jobs:
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
           echo "Evaluating branch: $BRANCH_NAME"
-          if [[ ! $BRANCH_NAME =~ ^(userstory/US.*|fix/.*|develop)$ ]]; then
-            echo "::error::Invalid branch name: '$BRANCH_NAME'. Must be userstory/US*, fix/*, or 'develop'."
+          if [[ ! $BRANCH_NAME =~ ^(userstory/US.*|fix/.*|develop|release)$ ]]; then
+            echo "::error::Invalid branch name: '$BRANCH_NAME'. Must be userstory/US*, fix/*, 'develop', or 'release'."
             exit 1
           fi
 
@@ -42,15 +42,10 @@ jobs:
       - name: Install Salesforce CLI
         run: npm install @salesforce/cli --global
 
-      - name: Route Validation to Correct Environment
+      - name: Route Validation to E1 Environment
         run: |
-          if [[ "${{ github.base_ref }}" == "develop" ]]; then
-            echo "Routing to E1 Sandbox..."
-            echo "TARGET_AUTH_URL=${{ secrets.MOCK_E1_AUTH_URL }}" >> $GITHUB_ENV
-          elif [[ "${{ github.base_ref }}" == "release" ]]; then
-            echo "Routing to UAT Sandbox..."
-            echo "TARGET_AUTH_URL=${{ secrets.MOCK_UAT_AUTH_URL }}" >> $GITHUB_ENV
-          fi
+          echo "Routing all validation traffic to E1 Sandbox for training..."
+          echo "TARGET_AUTH_URL=${{ secrets.MOCK_E1_AUTH_URL }}" >> $GITHUB_ENV
 
       - name: Authenticate to Target Org
         run: |

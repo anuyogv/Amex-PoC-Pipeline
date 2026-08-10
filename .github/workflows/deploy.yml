@@ -1,0 +1,34 @@
+name: Deploy Metadata
+
+on:
+  push:
+    branches: [ develop, release ]
+    paths:
+      - 'force-app/main/default/**'
+
+concurrency:
+  group: salesforce-e1-org
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install @salesforce/cli --global
+
+      - name: Route Deployment to E1 Environment
+        run: |
+          echo "TARGET_AUTH_URL=${{ secrets.MOCK_E1_AUTH_URL }}" >> $GITHUB_ENV
+
+      - name: Authenticate to Target Org
+        run: |
+          echo "$TARGET_AUTH_URL" > authfile
+          sf org login sfdx-url --sfdx-url-file authfile --set-default
+          rm authfile
+
+      - name: Deploy to Target Org
+        run: sf project deploy start --source-dir force-app
