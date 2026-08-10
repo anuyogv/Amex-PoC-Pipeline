@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants basic object access for the simulated CI/CD training environment.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Training Sim Access</label>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Case.Trainee_Warning_Flag__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+</PermissionSet>
